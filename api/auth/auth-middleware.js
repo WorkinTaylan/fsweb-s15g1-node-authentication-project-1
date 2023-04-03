@@ -8,15 +8,19 @@ const UsersModel=require("../users/users-model")
   }
 */
 async function sinirli(req,res,next) {
-  if(req.session && req.session.user_id){
-      console.log(req.session.user_id);
+  try{
+    if(req.session && req.session.user_id){
+      //console.log(req.session.user_id);
       next()
   }
   else{
-    res.status(401).json({message:"Geçemezsiniz"})
+    res.status(401).json({message:"Geçemezsiniz!"})
   }
 }
-
+  catch(error){
+    next(error)
+  }
+}
 /*
   req.body de verilen username halihazırda veritabanında varsa
 
@@ -25,8 +29,21 @@ async function sinirli(req,res,next) {
     "message": "Username kullaniliyor"
   }
 */
-function usernameBostami() {
-
+async function usernameBostami(req,res,next) {
+try {
+  let isExistUser=await UsersModel.goreBul({username:req.body.username})
+  if(isExistUser && isExistUser.length>0){
+    next({
+      status:422,
+      message:"Username kullaniliyor"
+    })
+  }
+  else{
+    next()
+  }
+} catch (error) {
+  next(error)
+}
 }
 
 /*
@@ -37,8 +54,23 @@ function usernameBostami() {
     "message": "Geçersiz kriter"
   }
 */
-function usernameVarmi() {
+async function usernameVarmi(req,res,next) {
 
+  try {
+    let isExistUser=await UsersModel.goreBul({username:req.body.username})
+  if(!isExistUser || isExistUser.length==0){
+    next({
+      status:401,
+      message:"Geçersiz kriter"
+    })
+  }
+  else{
+    req.existUser=isExistUser[0]
+    next()
+  }
+  } catch (error) {
+    next(error)
+  }
 }
 
 /*
@@ -49,11 +81,26 @@ function usernameVarmi() {
     "message": "Şifre 3 karakterden fazla olmalı"
   }
 */
-function sifreGecerlimi() {
+async function sifreGecerlimi(req,res,next) {
 
+  try {
+    let {password}=req.body
+    if(!password || password.length<3){
+      next({
+        status:422,
+        message:"Şifre 3 karakterden fazla olmalı"
+      })
+    }
+    else{
+      next()
+    }
+  } catch (error) {
+    next(error)
+  }
 }
 
 // Diğer modüllerde kullanılabilmesi için fonksiyonları "exports" nesnesine eklemeyi unutmayın.
 module.exports={
-  sinirli
+  sinirli,
+  usernameVarmi,usernameBostami,sifreGecerlimi
 }

@@ -2,6 +2,7 @@ const express = require("express");
 const session=require("express-session");
 const helmet = require("helmet");
 const cors = require("cors");
+const SessionStore=require("connect-session-knex")(session)
 
 /**
   Kullanıcı oturumlarını desteklemek için `express-session` paketini kullanın!

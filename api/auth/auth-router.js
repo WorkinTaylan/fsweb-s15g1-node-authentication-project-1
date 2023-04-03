@@ -3,7 +3,7 @@
 const router=require("express").Router();
 const UsersModel=require("../users/users-model");
 const bcrypt=require("bcryptjs");
-
+const mw=require("./auth-middleware")
 /**
   1 [POST] /api/auth/register { "username": "sue", "password": "1234" }
 
@@ -26,19 +26,13 @@ const bcrypt=require("bcryptjs");
     "message": "Şifre 3 karakterden fazla olmalı"
   }
  */
-router.post("/register", async(req,res,next)=>{
+router.post("/register", mw.sifreGecerlimi, mw.usernameBostami, async(req,res,next)=>{
   try {
-    const user=req.body;
-    const hashedPassword=bcrypt.hashSync(user.password, 12)
-    user.password=hashedPassword;
-    const newUser=await UsersModel.ekle(user);
-
-    if(newUser){
-      res.status(201).json(newUser)
-    }else{  
-      next()  
-    } 
-  } 
+    let hashedPassword=bcrypt.hashSync(req.body.password, 12) 
+    let model={username:req.body.username, password:hashedPassword}
+    let newUser=await UsersModel.ekle(model);
+    res.status(201).json(newUser)
+  }
   catch (error) {
       next(error)
   }
@@ -59,18 +53,21 @@ router.post("/register", async(req,res,next)=>{
     "message": "Geçersiz kriter!"
   }
  */
-  router.post("/login", async(req,res,next)=>{
+  router.post("/login", mw.usernameVarmi, async(req,res,next)=>{
     try {
-      const {username}=req.body;
-      const {password}=req.body;
-      const registeredUser=await UsersModel.goreBul(username)
-    
-      if(registeredUser && bcrypt.compareSync(password, registeredUser.password )){
-        req.session.user_id =registeredUser.user_id
-        res.status(200).json({message:`Hoşgeldin ${registeredUser.username}`})
+      let isValidPassword=bcrypt.compareSync(req.body.password, req.existUser.password)
+      if(isValidPassword){
+        req.session.user_id=req.existUser.user_id;
+        res.json({
+          message:`Hoşgeldin ${req.body.username}`
+        })
       }else{
-        res.status(401).json({message:"Geçersiz kriter"})
+        next({
+          status:401,
+          message:"Geçersiz kriter!"
+        })
       }
+    
     } catch (error) {
       next(error)
     }
@@ -80,16 +77,20 @@ router.post("/register", async(req,res,next)=>{
   router.get("/logout", async(req,res,next)=>{
 
     try {
-      if(req.session){
+      if(req.session.user_id){
         req.session.destroy(err=>{
           if(err){
-            res.status(400).json({message:'error logging out'});
+            res.status(500).json({message:'session destroy edilirken hata oluştu'});
           }else{
-            res.status(200).json({message:'good bye'})
+            res.status(200).json({message:'Çıkış yapildi'})
           }
         });
       }
-    } catch (error) {
+      else{
+        res.status(200).json({message:"Oturum bulunamadı!"})
+      }
+    }
+    catch (error) {
       next(error)
     }
 

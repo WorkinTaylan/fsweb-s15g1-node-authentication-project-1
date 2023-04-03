@@ -5,25 +5,31 @@ const db=require("../../data/db-config");
 async function bul() {
 
   const allUsers=await db("users")
-  return allUsers;
+  /* const responseList= allUsers.forEach(element => {
+    delete element.password
+  }); */
+  const allUserResponse=allUsers.map(item=>{
+    return {user_id:item.user_id, username:item.username}
+  })
+  return allUserResponse;
 }
-
+  
 /**
   verilen filtreye sahip tüm kullanıcıları içeren bir DİZİ ye çözümlenir
  */
-function goreBul(username) {
-
-return db("users").where("username", username).first()
-
-}
+  async function goreBul(filtre) {
+    let filteredUsers=await db("users").where(filtre)
+    return filteredUsers;
+    
+  };
 
 /**
   verilen user_id li kullanıcıya çözümlenir, kullanıcı { user_id, username } içerir
  */
-function idyeGoreBul(user_id) {
+async function idyeGoreBul(user_id) {
 
-return db("users").where("user_id", user_id)
-
+  const result=await db("users").where("user_id", user_id).first();
+  return {username:result.username, user_id:result.user_id};
 }
 
 /**
@@ -31,8 +37,8 @@ return db("users").where("user_id", user_id)
  */
 async function ekle(user) {
 
-  const [user_id]=await db("users").insert(user);
-  return idyeGoreBul(user_id)
+  const inserted=await db("users").insert(user);
+  return idyeGoreBul(inserted[0])
 
 }
 
