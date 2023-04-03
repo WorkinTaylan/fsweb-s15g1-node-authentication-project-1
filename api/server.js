@@ -1,4 +1,5 @@
 const express = require("express");
+const session=require("express-session");
 const helmet = require("helmet");
 const cors = require("cors");
 
@@ -16,10 +17,28 @@ const cors = require("cors");
  */
 
 const server = express();
+const sessionConfig={
+  name:"cikolatacips",
+  secret:process.env.SESSION_SECRET || "Herhangi bir şey",
+  cookie:{
+    maxAge:1000*30,
+    secure:process.env.SECURE_COOKIE || false
+  },
+  httpOnly:true,
+  resave:false,
+  saveUninitialized:false 
+};
 
-server.use(helmet());
+const authRouter=require("./auth/auth-router");
+const usersRouter=require("./users/users-router");
+
 server.use(express.json());
+server.use(session(sessionConfig))
 server.use(cors());
+server.use(helmet());
+
+server.use("/api/auth", authRouter);
+server.use("/api/users", usersRouter)
 
 server.get("/", (req, res) => {
   res.json({ api: "up" });

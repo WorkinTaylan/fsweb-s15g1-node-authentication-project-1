@@ -1,6 +1,8 @@
 // `checkUsernameFree`, `checkUsernameExists` ve `checkPasswordLength` gereklidir (require)
 // `auth-middleware.js` deki middleware fonksiyonları. Bunlara burda ihtiyacınız var!
-
+const router=require("express").Router();
+const UsersModel=require("../users/users-model");
+const bcrypt=require("bcryptjs");
 
 /**
   1 [POST] /api/auth/register { "username": "sue", "password": "1234" }
@@ -24,7 +26,23 @@
     "message": "Şifre 3 karakterden fazla olmalı"
   }
  */
+router.post("/register", async(req,res,next)=>{
+  try {
+    const user=req.body;
+    const hashedPassword=bcrypt.hashSync(user.password, 12)
+    user.password=hashedPassword;
+    const newUser=await UsersModel.ekle(user);
 
+    if(newUser){
+      res.status(201).json(newUser)
+    }else{  
+      next()  
+    } 
+  } 
+  catch (error) {
+      next(error)
+  }
+})
 
 /**
   2 [POST] /api/auth/login { "username": "sue", "password": "1234" }
@@ -41,8 +59,41 @@
     "message": "Geçersiz kriter!"
   }
  */
+  router.post("/login", async(req,res,next)=>{
+    try {
+      const {username}=req.body;
+      const {password}=req.body;
+      const registeredUser=await UsersModel.goreBul(username)
+    
+      if(registeredUser && bcrypt.compareSync(password, registeredUser.password )){
+        req.session.user_id =registeredUser.user_id
+        res.status(200).json({message:`Hoşgeldin ${registeredUser.username}`})
+      }else{
+        res.status(401).json({message:"Geçersiz kriter"})
+      }
+    } catch (error) {
+      next(error)
+    }
 
+  });
 
+  router.get("/logout", async(req,res,next)=>{
+
+    try {
+      if(req.session){
+        req.session.destroy(err=>{
+          if(err){
+            res.status(400).json({message:'error logging out'});
+          }else{
+            res.status(200).json({message:'good bye'})
+          }
+        });
+      }
+    } catch (error) {
+      next(error)
+    }
+
+  });
 /**
   3 [GET] /api/auth/logout
 
@@ -59,5 +110,6 @@
   }
  */
 
- 
+
 // Diğer modüllerde kullanılabilmesi için routerı "exports" nesnesine eklemeyi unutmayın.
+module.exports=router;

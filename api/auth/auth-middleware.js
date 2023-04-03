@@ -1,3 +1,4 @@
+const UsersModel=require("../users/users-model")
 /*
   Kullanıcının sunucuda kayıtlı bir oturumu yoksa
 
@@ -6,8 +7,14 @@
     "message": "Geçemezsiniz!"
   }
 */
-function sinirli() {
-
+async function sinirli(req,res,next) {
+  if(req.session && req.session.user_id){
+      console.log(req.session.user_id);
+      next()
+  }
+  else{
+    res.status(401).json({message:"Geçemezsiniz"})
+  }
 }
 
 /*
@@ -47,3 +54,6 @@ function sifreGecerlimi() {
 }
 
 // Diğer modüllerde kullanılabilmesi için fonksiyonları "exports" nesnesine eklemeyi unutmayın.
+module.exports={
+  sinirli
+}
